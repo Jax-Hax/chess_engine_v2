@@ -1,7 +1,7 @@
 mod move_generation;
 
-use std::io;
 use crate::move_generation::generate_all_moves;
+use std::io;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Color {
@@ -251,6 +251,31 @@ impl Board {
         // Move the piece
         self.tiles[to].piece = moving_piece;
         self.tiles[from].piece = None;
+
+        //check if its a pawn and do corresponding stuff if so
+        let tile = self.tiles[from].piece;
+        match tile {
+            Some(piece) => {
+                match piece.piece_type {
+                    PieceType::Pawn(first_move, en_passant) => {
+                        if first_move {
+                            self.tiles[from].piece = Some(Piece {
+                                color: piece.color,
+                                piece_type: PieceType::Pawn(false, self.num_moves as i16), // Set en passant
+                            });
+                        }
+                        else {
+                            self.tiles[from].piece = Some(Piece {
+                                color: piece.color,
+                                piece_type: PieceType::Pawn(false, -1), // Reset en passant
+                            });
+                        }
+                    },
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
 
         // Switch turns
         self.current_turn = match self.current_turn {
