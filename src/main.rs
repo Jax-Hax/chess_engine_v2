@@ -287,6 +287,8 @@ impl Board {
                             } else {
                                 false
                             }
+                        } else {
+                            false
                         }
                     } else {
                         false
