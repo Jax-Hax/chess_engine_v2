@@ -33,6 +33,16 @@ pub struct Tile {
 pub struct Move {
     from: usize,
     to: usize,
+    capture_type: CaptureType,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CaptureType {
+    Normal,
+    EnPassant(usize),
+    WhiteQueensideCastle,
+    WhiteKingsideCastle,
+    BlackQueensideCastle,
+    BlackKingsideCastle,
 }
 #[derive(Clone, Debug)]
 pub struct Board {
@@ -234,43 +244,37 @@ impl Board {
         println!("  abcdefgh")
     }
     // Move a piece from one tile to another if valid
-    fn move_piece(&mut self, from: usize, to: usize) -> bool {
-        let moving_piece = self.tiles[from].piece;
+    fn move_piece(&mut self, move_played: &Move) -> bool {
+        let moving_piece = self.tiles[move_played.from].piece;
         if moving_piece.is_none() {
             println!("No piece at the source position.");
             return false;
         }
 
         // Capture if there's an enemy piece on the destination tile
-        if let Some(dest_piece) = self.tiles[to].piece {
+        if let Some(dest_piece) = self.tiles[move_played.to].piece {
             if dest_piece.color != moving_piece.unwrap().color {
                 println!("Captured a piece!");
             }
         }
 
         // Move the piece
-        self.tiles[to].piece = moving_piece;
-        self.tiles[from].piece = None;
+        self.tiles[move_played.to].piece = moving_piece;
+        self.tiles[move_played.from].piece = None;
 
         //check if its a pawn and do corresponding stuff if so
-        let tile = self.tiles[from].piece;
+        let tile = self.tiles[move_played.to].piece;
         match tile {
             Some(piece) => {
                 match piece.piece_type {
                     PieceType::Pawn(first_move, en_passant) => {
                         if first_move {
-                            self.tiles[from].piece = Some(Piece {
+                            self.tiles[move_played.to].piece = Some(Piece {
                                 color: piece.color,
                                 piece_type: PieceType::Pawn(false, self.num_moves as i16), // Set en passant
                             });
                         }
-                        else {
-                            self.tiles[from].piece = Some(Piece {
-                                color: piece.color,
-                                piece_type: PieceType::Pawn(false, -1), // Reset en passant
-                            });
-                        }
-                    },
+                    }
                     _ => {}
                 }
             }
@@ -337,13 +341,17 @@ impl Board {
 
                 match (from_idx, to_idx) {
                     (Some(from), Some(to)) => {
-                        move_is_valid = valid_moves.contains(&Move { from, to });
-                        if move_is_valid {
-                            if self.move_piece(from, to) {
-                                self.num_moves += 1;
+                        let move_played = valid_moves.iter().find(|e| e.from == from && e.to == to);
+                        match move_played {
+                            Some(move_exists) => {
+                                if self.move_piece(move_exists) {
+                                    move_is_valid = true;
+                                    self.num_moves += 1;
+                                }
                             }
-                        } else {
-                            println!("Move was invalid. Try again.");
+                            _ => {
+                                println!("Move was invalid. Try again.");
+                            }
                         }
                     }
                     _ => println!("Invalid chess notation. Try again."),

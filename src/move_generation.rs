@@ -1,4 +1,4 @@
-use crate::{Board, Color, Move, Piece, PieceType};
+use crate::{Board, Color, Move, Piece, PieceType, CaptureType};
 
 // Function to generate all valid moves for the current player
 pub fn generate_all_moves(board: &Board) -> Vec<Move> {
@@ -38,7 +38,7 @@ fn generate_pawn_moves(board: &Board, from: usize, piece: Piece) -> Vec<Move> {
     // Single step forward
     let to = (from as isize + direction) as usize;
     if to < 64 && board.tiles[to].piece.is_none() {
-        moves.push(Move { from, to });
+        moves.push(Move { from, to, capture_type: CaptureType::Normal });
     }
 
     // Double step forward if first move
@@ -48,31 +48,37 @@ fn generate_pawn_moves(board: &Board, from: usize, piece: Piece) -> Vec<Move> {
             moves.push(Move {
                 from,
                 to: double_step,
+                capture_type: CaptureType::Normal
             });
         }
     }
 
     // Diagonal capture
     let diagonals = [direction + 1, direction - 1];
+    let mut index = 0;
     for &diag in &diagonals {
         let to = (from as isize + diag) as usize;
         if to < 64 {
             if let Some(captured_piece) = board.tiles[to].piece {
                 if captured_piece.color != piece.color {
-                    moves.push(Move { from, to });
+                    moves.push(Move { from, to, capture_type: CaptureType::Normal });
                 }
             } else {
                 // En passant capture
                 let adj_tile = (from as isize + (diag - direction)) as usize;
                 if let Some(adj_pawn) = board.tiles[adj_tile].piece {
-                    if let PieceType::Pawn(_, en_passant_move) = adj_pawn.piece_type {
-                        if en_passant_move != -1 {
-                            moves.push(Move { from, to });
+                    if adj_pawn.color != piece.color {
+                        if let PieceType::Pawn(_, en_passant_move) = adj_pawn.piece_type {
+                            let capture_type = diagonals[index];
+                            if en_passant_move != -1 {
+                                moves.push(Move { from, to, capture_type: CaptureType::EnPassant(capture_type as usize) });
+                            }
                         }
                     }
                 }
             }
         }
+        index += 1;
     }
 
     moves
@@ -84,7 +90,7 @@ fn generate_knight_moves(board: &Board, from: usize) -> Vec<Move> {
     for &offset in &knight_moves {
         let to = (from as isize + offset) as usize;
         if to < 64 && is_valid_destination(board, from, to) {
-            moves.push(Move { from, to });
+            moves.push(Move { from, to, capture_type: CaptureType::Normal });
         }
     }
     moves
@@ -101,7 +107,7 @@ fn generate_sliding_piece_moves(board: &Board, from: usize, offsets: &[isize]) -
             }
             let to = pos as usize;
             if is_valid_destination(board, from, to) {
-                moves.push(Move { from, to });
+                moves.push(Move { from, to, capture_type: CaptureType::Normal });
                 if board.tiles[to].piece.is_some() {
                     break; // Stop sliding if we hit a piece
                 }
@@ -119,7 +125,7 @@ fn generate_king_moves(board: &Board, from: usize) -> Vec<Move> {
     for &offset in &king_moves {
         let to = (from as isize + offset) as usize;
         if to < 64 && is_valid_destination(board, from, to) {
-            moves.push(Move { from, to });
+            moves.push(Move { from, to, capture_type: CaptureType::Normal });
         }
     }
     moves
