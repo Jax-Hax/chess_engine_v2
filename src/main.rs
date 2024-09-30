@@ -43,6 +43,7 @@ enum CaptureType {
     WhiteKingsideCastle,
     BlackQueensideCastle,
     BlackKingsideCastle,
+    Doublestep
 }
 #[derive(Clone, Debug)]
 pub struct Board {
@@ -262,23 +263,17 @@ impl Board {
         self.tiles[move_played.to].piece = moving_piece;
         self.tiles[move_played.from].piece = None;
 
-        //check if its a pawn and do corresponding stuff if so
-        let tile = self.tiles[move_played.to].piece;
-        match tile {
-            Some(piece) => {
-                match piece.piece_type {
-                    PieceType::Pawn(first_move, en_passant) => {
-                        if first_move {
-                            self.tiles[move_played.to].piece = Some(Piece {
-                                color: piece.color,
-                                piece_type: PieceType::Pawn(false, self.num_moves as i16), // Set en passant
-                            });
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
+        //can en passant
+        if move_played.capture_type == CaptureType::Doublestep {
+            self.tiles[move_played.to].piece = Some(Piece {
+                color: self.current_turn,
+                piece_type: PieceType::Pawn(false, self.num_moves as i16), // Set en passant
+            });
+        }
+
+        //if en passanted
+        if let CaptureType::EnPassant(target) = move_played.capture_type {
+            self.tiles[target].piece = None;
         }
 
         // Switch turns

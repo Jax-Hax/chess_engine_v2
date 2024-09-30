@@ -48,7 +48,7 @@ fn generate_pawn_moves(board: &Board, from: usize, piece: Piece) -> Vec<Move> {
             moves.push(Move {
                 from,
                 to: double_step,
-                capture_type: CaptureType::Normal
+                capture_type: CaptureType::Doublestep
             });
         }
     }
@@ -69,9 +69,8 @@ fn generate_pawn_moves(board: &Board, from: usize, piece: Piece) -> Vec<Move> {
                 if let Some(adj_pawn) = board.tiles[adj_tile].piece {
                     if adj_pawn.color != piece.color {
                         if let PieceType::Pawn(_, en_passant_move) = adj_pawn.piece_type {
-                            let capture_type = diagonals[index];
                             if en_passant_move != -1 {
-                                moves.push(Move { from, to, capture_type: CaptureType::EnPassant(capture_type as usize) });
+                                moves.push(Move { from, to, capture_type: CaptureType::EnPassant(adj_tile) });
                             }
                         }
                     }
