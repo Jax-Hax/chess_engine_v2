@@ -1,12 +1,25 @@
 mod move_generation;
 
-use crate::move_generation::generate_all_moves;
-use std::io;
+use move_generation::generate_human_legal_moves;
+
+use crate::move_generation::generate_legal_moves;
+use std::{io, ops::Not};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Color {
     White,
     Black,
+}
+
+impl Not for Color {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Color::White => Color::Black,
+            Color::Black => Color::White
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -176,7 +189,7 @@ impl Board {
         }
     }
     fn print_board(&self) {
-        println!("  abcdefgh");
+        println!("  a b c d e f g h");
         print!("8 ");
         for (i, tile) in self.tiles.iter().enumerate() {
             if let Some(piece) = tile.piece {
@@ -234,7 +247,7 @@ impl Board {
             } else {
                 print!(".");
             }
-
+            print!(" ");
             // Newline after every 8 tiles (since the board is 8x8)
             if (i + 1) % 8 == 0 && (64 - i) / 8 != 0 {
                 println!();
@@ -242,20 +255,24 @@ impl Board {
             }
         }
         println!();
-        println!("  abcdefgh")
+        println!("  a b c d e f g h")
     }
     // Move a piece from one tile to another if valid
-    fn move_piece(&mut self, move_played: &Move) -> bool {
+    fn make_move(&mut self, move_played: &Move, for_humans: bool) -> bool {
         let moving_piece = self.tiles[move_played.from].piece;
         if moving_piece.is_none() {
-            println!("No piece at the source position.");
+            if for_humans {
+                println!("No piece at the source position.");
+            }
             return false;
         }
 
-        // Capture if there's an enemy piece on the destination tile
-        if let Some(dest_piece) = self.tiles[move_played.to].piece {
-            if dest_piece.color != moving_piece.unwrap().color {
-                println!("Captured a piece!");
+        if for_humans {
+            // Capture if there's an enemy piece on the destination tile
+            if let Some(dest_piece) = self.tiles[move_played.to].piece {
+                if dest_piece.color != moving_piece.unwrap().color {
+                    println!("Captured a piece!");
+                }
             }
         }
 
@@ -367,6 +384,9 @@ impl Board {
             Color::Black => self.can_castle_black_queenside,
         }
     }
+    fn unmake_move(&mut self, piece_move: Move) {
+
+    }
     // Basic game loop
     fn game_loop(&mut self) {
         loop {
@@ -375,7 +395,7 @@ impl Board {
             println!("Current turn: {:?}", self.current_turn);
 
             // Generate all valid moves for the current turn
-            let valid_moves = generate_all_moves(&self);
+            let (valid_moves, all_moves) = generate_human_legal_moves(self);
             if valid_moves.is_empty() {
                 println!("No valid moves available. Game over!");
                 break;
@@ -408,7 +428,7 @@ impl Board {
                         let move_played = valid_moves.iter().find(|e| e.from == from && e.to == to);
                         match move_played {
                             Some(move_exists) => {
-                                if self.move_piece(move_exists) {
+                                if self.make_move(move_exists, true) {
                                     move_is_valid = true;
                                     self.num_moves += 1;
                                 }

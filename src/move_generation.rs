@@ -1,8 +1,9 @@
 use crate::{Board, CaptureType, Color, Move, Piece, PieceType};
 
 // Function to generate all valid moves for the current player
-pub fn generate_all_moves(board: &Board) -> Vec<Move> {
+fn generate_all_moves(board: &Board) -> (Vec<Move>, usize) {
     let mut moves = Vec::new();
+    let mut king_space = 0;
 
     for (i, tile) in board.tiles.iter().enumerate() {
         if let Some(piece) = tile.piece {
@@ -20,12 +21,15 @@ pub fn generate_all_moves(board: &Board) -> Vec<Move> {
                     PieceType::Queen => {
                         moves.extend(generate_sliding_piece_moves(board, i, &[9, 7, 8, 1]))
                     }
-                    PieceType::King => moves.extend(generate_king_moves(board, i)),
+                    PieceType::King => {
+                        moves.extend(generate_king_moves(board, i));
+                        king_space = i;
+                    }
                 }
             }
         }
     }
-    moves
+    (moves, king_space)
 }
 
 fn generate_pawn_moves(board: &Board, from: usize, piece: Piece) -> Vec<Move> {
@@ -163,7 +167,6 @@ fn generate_king_moves(board: &Board, from: usize) -> Vec<Move> {
         if empty_squares
             .iter()
             .all(|&i| board.tiles[i].piece.is_none())
-            && !is_in_check(board, from)
         {
             moves.push(Move {
                 from,
@@ -183,7 +186,6 @@ fn generate_king_moves(board: &Board, from: usize) -> Vec<Move> {
         if empty_squares
             .iter()
             .all(|&i| board.tiles[i].piece.is_none())
-            && !is_in_check(board, from)
         {
             moves.push(Move {
                 from,
@@ -206,4 +208,33 @@ fn is_valid_destination(board: &Board, from: usize, to: usize) -> bool {
         return dest_piece.color != board.tiles[from].piece.unwrap().color;
     }
     true
+}
+
+pub fn generate_legal_moves(board: &mut Board) -> Vec<Move> {
+    let (pseudo_legal_moves, king_space) = generate_all_moves(board);
+    let mut legal_moves = Vec::new();
+    for pseudo_legal_move in pseudo_legal_moves {
+        board.make_move(&pseudo_legal_move, false);
+        let new_moves = generate_all_moves(board).0;
+        if let Some(_) = new_moves.iter().find(|&&x| x.to == king_space) {
+        } else {
+            legal_moves.push(pseudo_legal_move);
+        }
+    }
+    legal_moves
+}
+
+pub fn generate_human_legal_moves(board: &mut Board) -> (Vec<Move>, Vec<Move>) {
+    let (pseudo_legal_moves, king_space) = generate_all_moves(board);
+    let mut legal_moves = Vec::new();
+    for pseudo_legal_move in &pseudo_legal_moves {
+        board.make_move(pseudo_legal_move, false);
+        let new_moves = generate_all_moves(board).0;
+        if let Some(_) = new_moves.iter().find(|&&x| x.to == king_space) {
+        } else {
+            legal_moves.push(*pseudo_legal_move);
+        }
+        board.unmake_move(*pseudo_legal_move);
+    }
+    (legal_moves, pseudo_legal_moves)
 }
