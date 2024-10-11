@@ -352,7 +352,7 @@ impl Board {
             Color::White => Color::Black,
             Color::Black => Color::White,
         };
-
+        self.num_moves += 1;
         true
     }
     fn reset_en_passant(&mut self) {
@@ -478,13 +478,13 @@ impl Board {
             }
             CaptureType::Doublestep => {
                 // Reset the pawn to its position before the double step
-                self.tiles[move_played.to].piece = Some(Piece {
+                self.tiles[move_played.from].piece = Some(Piece {
                     color: if self.current_turn == Color::White {
                         Color::Black
                     } else {
                         Color::White
                     },
-                    piece_type: PieceType::Pawn(false, self.num_moves as i16 - 1), // Reset moves
+                    piece_type: PieceType::Pawn(true, self.num_moves as i16 - 1), // Reset moves
                 });
             }
             CaptureType::EnPassant(target) => {
@@ -506,6 +506,8 @@ impl Board {
             Color::White => Color::Black,
             Color::Black => Color::White,
         };
+        
+        self.num_moves -= 1;
     }
     // Basic game loop
     fn game_loop(&mut self) {
@@ -550,7 +552,6 @@ impl Board {
                             Some(move_exists) => {
                                 if self.make_move(move_exists, true) {
                                     move_is_valid = true;
-                                    self.num_moves += 1;
                                 }
                             }
                             _ => {
