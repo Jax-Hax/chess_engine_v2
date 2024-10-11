@@ -1,4 +1,4 @@
-use crate::{Board, CaptureType, Color, Move, Piece, PieceType};
+use crate::{Board, CaptureType, Color, Move, MoveAttempt, Piece, PieceType};
 
 // Function to generate all valid moves for the current player
 fn generate_all_moves(board: &Board) -> (Vec<Move>, usize) {
@@ -229,12 +229,13 @@ pub fn generate_human_legal_moves(board: &mut Board) -> (Vec<Move>, Vec<Move>) {
     let mut legal_moves = Vec::new();
     for pseudo_legal_move in &pseudo_legal_moves {
         board.make_move(pseudo_legal_move, false);
+        let move_played = MoveAttempt::new(pseudo_legal_move, &board);
         let new_moves = generate_all_moves(board).0;
         if let Some(_) = new_moves.iter().find(|&&x| x.to == king_space) {
         } else {
             legal_moves.push(*pseudo_legal_move);
         }
-        board.unmake_move(*pseudo_legal_move);
+        board.unmake_move(move_played);
     }
     (legal_moves, pseudo_legal_moves)
 }

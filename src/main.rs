@@ -1,8 +1,6 @@
 mod move_generation;
 
 use move_generation::generate_human_legal_moves;
-
-use crate::move_generation::generate_legal_moves;
 use std::{io, ops::Not};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -17,7 +15,7 @@ impl Not for Color {
     fn not(self) -> Self::Output {
         match self {
             Color::White => Color::Black,
-            Color::Black => Color::White
+            Color::Black => Color::White,
         }
     }
 }
@@ -57,6 +55,28 @@ enum CaptureType {
     BlackQueensideCastle,
     BlackKingsideCastle,
     Doublestep,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MoveAttempt {
+    from: usize,
+    to: usize,
+    capture_type: CaptureType,
+    captured_piece: Option<Piece>,
+}
+impl MoveAttempt {
+    fn new(move_played: &Move, board: &Board) -> Self {
+        let mut captured_piece = board.tiles[move_played.to].piece;
+        if let CaptureType::EnPassant(target) = move_played.capture_type {
+            captured_piece = board.tiles[target].piece;
+        }
+        Self {
+            from: move_played.from,
+            to: move_played.to,
+            capture_type: move_played.capture_type,
+            captured_piece,
+        }
+    }
 }
 #[derive(Clone, Debug)]
 pub struct Board {
@@ -384,8 +404,108 @@ impl Board {
             Color::Black => self.can_castle_black_queenside,
         }
     }
-    fn unmake_move(&mut self, piece_move: Move) {
+    fn unmake_move(&mut self, move_played: MoveAttempt) {
+        let moving_piece = self.tiles[move_played.to].piece;
+        self.tiles[move_played.from].piece = moving_piece; // Place it back at the source
 
+        self.tiles[move_played.to].piece = None;
+        // Check if a piece was captured
+        if let Some(_) = move_played.captured_piece {
+            // Restore the captured piece at its original position
+            self.tiles[move_played.to].piece = move_played.captured_piece;
+        }
+
+        match move_played.capture_type {
+            CaptureType::WhiteKingsideCastle => {
+                // Move the king back to its original position (e1 -> g1)
+                self.tiles[60].piece = Some(Piece {
+                    color: Color::White,
+                    piece_type: PieceType::King,
+                });
+                self.tiles[62].piece = None; // Clear the position where the king moved to
+
+                // Restore the rook to its original position (h1 -> f1)
+                self.tiles[61].piece = Some(Piece {
+                    color: Color::White,
+                    piece_type: PieceType::Rook,
+                });
+                self.tiles[63].piece = None; // Clear the position where the rook moved from
+            }
+            CaptureType::WhiteQueensideCastle => {
+                // Move the king back to its original position (e1 -> c1)
+                self.tiles[60].piece = Some(Piece {
+                    color: Color::White,
+                    piece_type: PieceType::King,
+                });
+                self.tiles[58].piece = None; // Clear the position where the king moved to
+
+                // Restore the rook to its original position (a1 -> d1)
+                self.tiles[59].piece = Some(Piece {
+                    color: Color::White,
+                    piece_type: PieceType::Rook,
+                });
+                self.tiles[56].piece = None; // Clear the position where the rook moved from
+            }
+            CaptureType::BlackKingsideCastle => {
+                // Move the king back to its original position (e8 -> g8)
+                self.tiles[4].piece = Some(Piece {
+                    color: Color::Black,
+                    piece_type: PieceType::King,
+                });
+                self.tiles[6].piece = None; // Clear the position where the king moved to
+
+                // Restore the rook to its original position (h8 -> f8)
+                self.tiles[5].piece = Some(Piece {
+                    color: Color::Black,
+                    piece_type: PieceType::Rook,
+                });
+                self.tiles[7].piece = None; // Clear the position where the rook moved from
+            }
+            CaptureType::BlackQueensideCastle => {
+                // Move the king back to its original position (e8 -> c8)
+                self.tiles[4].piece = Some(Piece {
+                    color: Color::Black,
+                    piece_type: PieceType::King,
+                });
+                self.tiles[2].piece = None; // Clear the position where the king moved to
+
+                // Restore the rook to its original position (a8 -> d8)
+                self.tiles[3].piece = Some(Piece {
+                    color: Color::Black,
+                    piece_type: PieceType::Rook,
+                });
+                self.tiles[0].piece = None; // Clear the position where the rook moved from
+            }
+            CaptureType::Doublestep => {
+                // Reset the pawn to its position before the double step
+                self.tiles[move_played.to].piece = Some(Piece {
+                    color: if self.current_turn == Color::White {
+                        Color::Black
+                    } else {
+                        Color::White
+                    },
+                    piece_type: PieceType::Pawn(false, self.num_moves as i16 - 1), // Reset moves
+                });
+            }
+            CaptureType::EnPassant(target) => {
+                // Restore the captured pawn for en passant
+                self.tiles[target].piece = Some(Piece {
+                    color: if self.current_turn == Color::White {
+                        Color::Black
+                    } else {
+                        Color::White
+                    },
+                    piece_type: PieceType::Pawn(false, self.num_moves as i16 - 1), // Assuming previous state is a pawn
+                });
+            }
+            _ => {}
+        }
+
+        // Switch turns back
+        self.current_turn = match self.current_turn {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        };
     }
     // Basic game loop
     fn game_loop(&mut self) {
@@ -434,7 +554,14 @@ impl Board {
                                 }
                             }
                             _ => {
-                                println!("Move was invalid. Try again.");
+                                let move_played =
+                                    all_moves.iter().find(|e| e.from == from && e.to == to);
+                                match move_played {
+                                    Some(_) => {
+                                        println!("Non-legal move played. Try again.");
+                                    }
+                                    _ => println!("Move was invalid. Try again."),
+                                }
                             }
                         }
                     }
