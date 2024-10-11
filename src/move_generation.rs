@@ -1,4 +1,4 @@
-use crate::{Board, Color, Move, Piece, PieceType, CaptureType};
+use crate::{Board, CaptureType, Color, Move, Piece, PieceType};
 
 // Function to generate all valid moves for the current player
 pub fn generate_all_moves(board: &Board) -> Vec<Move> {
@@ -38,7 +38,11 @@ fn generate_pawn_moves(board: &Board, from: usize, piece: Piece) -> Vec<Move> {
     // Single step forward
     let to = (from as isize + direction) as usize;
     if to < 64 && board.tiles[to].piece.is_none() {
-        moves.push(Move { from, to, capture_type: CaptureType::Normal });
+        moves.push(Move {
+            from,
+            to,
+            capture_type: CaptureType::Normal,
+        });
     }
 
     // Double step forward if first move
@@ -48,20 +52,23 @@ fn generate_pawn_moves(board: &Board, from: usize, piece: Piece) -> Vec<Move> {
             moves.push(Move {
                 from,
                 to: double_step,
-                capture_type: CaptureType::Doublestep
+                capture_type: CaptureType::Doublestep,
             });
         }
     }
 
     // Diagonal capture
     let diagonals = [direction + 1, direction - 1];
-    let mut index = 0;
     for &diag in &diagonals {
         let to = (from as isize + diag) as usize;
         if to < 64 {
             if let Some(captured_piece) = board.tiles[to].piece {
                 if captured_piece.color != piece.color {
-                    moves.push(Move { from, to, capture_type: CaptureType::Normal });
+                    moves.push(Move {
+                        from,
+                        to,
+                        capture_type: CaptureType::Normal,
+                    });
                 }
             } else {
                 // En passant capture
@@ -70,14 +77,17 @@ fn generate_pawn_moves(board: &Board, from: usize, piece: Piece) -> Vec<Move> {
                     if adj_pawn.color != piece.color {
                         if let PieceType::Pawn(_, en_passant_move) = adj_pawn.piece_type {
                             if en_passant_move != -1 {
-                                moves.push(Move { from, to, capture_type: CaptureType::EnPassant(adj_tile) });
+                                moves.push(Move {
+                                    from,
+                                    to,
+                                    capture_type: CaptureType::EnPassant(adj_tile),
+                                });
                             }
                         }
                     }
                 }
             }
         }
-        index += 1;
     }
 
     moves
@@ -89,7 +99,11 @@ fn generate_knight_moves(board: &Board, from: usize) -> Vec<Move> {
     for &offset in &knight_moves {
         let to = (from as isize + offset) as usize;
         if to < 64 && is_valid_destination(board, from, to) {
-            moves.push(Move { from, to, capture_type: CaptureType::Normal });
+            moves.push(Move {
+                from,
+                to,
+                capture_type: CaptureType::Normal,
+            });
         }
     }
     moves
@@ -106,7 +120,11 @@ fn generate_sliding_piece_moves(board: &Board, from: usize, offsets: &[isize]) -
             }
             let to = pos as usize;
             if is_valid_destination(board, from, to) {
-                moves.push(Move { from, to, capture_type: CaptureType::Normal });
+                moves.push(Move {
+                    from,
+                    to,
+                    capture_type: CaptureType::Normal,
+                });
                 if board.tiles[to].piece.is_some() {
                     break; // Stop sliding if we hit a piece
                 }
@@ -121,12 +139,64 @@ fn generate_sliding_piece_moves(board: &Board, from: usize, offsets: &[isize]) -
 fn generate_king_moves(board: &Board, from: usize) -> Vec<Move> {
     let mut moves = Vec::new();
     let king_moves = [-1, 1, -8, 8, -9, 9, -7, 7];
+
     for &offset in &king_moves {
         let to = (from as isize + offset) as usize;
         if to < 64 && is_valid_destination(board, from, to) {
-            moves.push(Move { from, to, capture_type: CaptureType::Normal });
+            moves.push(Move {
+                from,
+                to,
+                capture_type: CaptureType::Normal,
+            });
         }
     }
+
+    // Add castling moves
+    let (rank, kingside_rook, queenside_rook) = match board.current_turn {
+        Color::White => (7, 63, 56), // Rank 7 for white
+        Color::Black => (0, 7, 0),   // Rank 0 for black
+    };
+
+    // Kingside castling
+    if board.can_castle_kingside(board.current_turn) {
+        let empty_squares = [from + 1, from + 2];
+        if empty_squares
+            .iter()
+            .all(|&i| board.tiles[i].piece.is_none())
+            && !is_in_check(board, from)
+        {
+            moves.push(Move {
+                from,
+                to: from + 2,
+                capture_type: if board.current_turn == Color::White {
+                    CaptureType::WhiteKingsideCastle
+                } else {
+                    CaptureType::BlackKingsideCastle
+                },
+            });
+        }
+    }
+
+    // Queenside castling
+    if board.can_castle_queenside(board.current_turn) {
+        let empty_squares = [from - 1, from - 2, from - 3];
+        if empty_squares
+            .iter()
+            .all(|&i| board.tiles[i].piece.is_none())
+            && !is_in_check(board, from)
+        {
+            moves.push(Move {
+                from,
+                to: from - 2,
+                capture_type: if board.current_turn == Color::White {
+                    CaptureType::WhiteQueensideCastle
+                } else {
+                    CaptureType::BlackQueensideCastle
+                },
+            });
+        }
+    }
+
     moves
 }
 

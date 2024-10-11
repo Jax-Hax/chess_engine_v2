@@ -43,7 +43,7 @@ enum CaptureType {
     WhiteKingsideCastle,
     BlackQueensideCastle,
     BlackKingsideCastle,
-    Doublestep
+    Doublestep,
 }
 #[derive(Clone, Debug)]
 pub struct Board {
@@ -263,14 +263,48 @@ impl Board {
         self.tiles[move_played.to].piece = moving_piece;
         self.tiles[move_played.from].piece = None;
 
-        //can en passant
-        if move_played.capture_type == CaptureType::Doublestep {
-            self.tiles[move_played.to].piece = Some(Piece {
-                color: self.current_turn,
-                piece_type: PieceType::Pawn(false, self.num_moves as i16), // Set en passant
-            });
+        match move_played.capture_type {
+            CaptureType::WhiteKingsideCastle => {
+                self.tiles[move_played.to].piece = moving_piece;
+                self.tiles[move_played.from].piece = None;
+                // Move the rook
+                self.tiles[61].piece = self.tiles[63].piece;
+                self.tiles[63].piece = None;
+            }
+            CaptureType::WhiteQueensideCastle => {
+                self.tiles[move_played.to].piece = moving_piece;
+                self.tiles[move_played.from].piece = None;
+                // Move the rook
+                self.tiles[59].piece = self.tiles[56].piece;
+                self.tiles[56].piece = None;
+            }
+            CaptureType::BlackKingsideCastle => {
+                self.tiles[move_played.to].piece = moving_piece;
+                self.tiles[move_played.from].piece = None;
+                // Move the rook
+                self.tiles[5].piece = self.tiles[7].piece;
+                self.tiles[7].piece = None;
+            }
+            CaptureType::BlackQueensideCastle => {
+                self.tiles[move_played.to].piece = moving_piece;
+                self.tiles[move_played.from].piece = None;
+                // Move the rook
+                self.tiles[3].piece = self.tiles[0].piece;
+                self.tiles[0].piece = None;
+            }
+            CaptureType::Doublestep => {
+                self.tiles[move_played.to].piece = Some(Piece {
+                    color: self.current_turn,
+                    piece_type: PieceType::Pawn(false, self.num_moves as i16), // Set en passant
+                });
+            }
+            _ => {
+                // Regular movement logic
+            }
         }
-
+        if let Some(piece) = moving_piece {
+            self.update_castling_rights(move_played.from, piece);
+        }
         //if en passanted
         if let CaptureType::EnPassant(target) = move_played.capture_type {
             self.tiles[target].piece = None;
@@ -296,6 +330,41 @@ impl Board {
                     }
                 }
             }
+        }
+    }
+    fn update_castling_rights(&mut self, from: usize, piece: Piece) {
+        match piece.piece_type {
+            PieceType::King => match piece.color {
+                Color::White => {
+                    self.can_castle_white_kingside = false;
+                    self.can_castle_white_queenside = false;
+                }
+                Color::Black => {
+                    self.can_castle_black_kingside = false;
+                    self.can_castle_black_queenside = false;
+                }
+            },
+            PieceType::Rook => match (piece.color, from) {
+                (Color::White, 63) => self.can_castle_white_kingside = false,
+                (Color::White, 56) => self.can_castle_white_queenside = false,
+                (Color::Black, 7) => self.can_castle_black_kingside = false,
+                (Color::Black, 0) => self.can_castle_black_queenside = false,
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+    fn can_castle_kingside(&self, color: Color) -> bool {
+        match color {
+            Color::White => self.can_castle_white_kingside,
+            Color::Black => self.can_castle_black_kingside,
+        }
+    }
+
+    fn can_castle_queenside(&self, color: Color) -> bool {
+        match color {
+            Color::White => self.can_castle_white_queenside,
+            Color::Black => self.can_castle_black_queenside,
         }
     }
     // Basic game loop
