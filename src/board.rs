@@ -8,7 +8,7 @@ impl Board {
             .iter()
             .find_map(|(s, p)| if p.id == piece.id { Some(*s) } else { None })
     }
-    pub fn get_moves(&self) -> Vec<Move> {
+    pub fn get_moves(&self) -> (Vec<Move>, bool) {
         let mut moves = vec![];
         let opposite_color = self.turn.opposite();
 
@@ -327,7 +327,7 @@ impl Board {
             }
         }
 
-        moves
+        (moves, in_check)
     }
 
     fn get_straight_moves(&self, moves: &mut Vec<Move>, piece: &Piece, directions: &[(i8, i8)]) {
