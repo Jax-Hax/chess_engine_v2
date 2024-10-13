@@ -3,6 +3,45 @@ use structs::*;
 use crate::structs;
 
 impl Board {
+    pub fn print_board(&self) {
+        let mut board_rep = [['.'; 8]; 8]; // Initialize the board with empty squares
+
+        // Populate the board with pieces
+        for (square, piece) in &self.pieces {
+            let rank_idx = 7 - Into::<i8>::into(square.rank) as usize; // Invert rank for display (top-down)
+            let file_idx = Into::<i8>::into(square.file) as usize;
+
+            // Get a character for the piece based on its type and color
+            let piece_char = match (piece.r#type, piece.color) {
+                (PieceType::Pawn, Color::White) => 'P',
+                (PieceType::Pawn, Color::Black) => 'p',
+                (PieceType::Knight, Color::White) => 'N',
+                (PieceType::Knight, Color::Black) => 'n',
+                (PieceType::Bishop, Color::White) => 'B',
+                (PieceType::Bishop, Color::Black) => 'b',
+                (PieceType::Rook, Color::White) => 'R',
+                (PieceType::Rook, Color::Black) => 'r',
+                (PieceType::Queen, Color::White) => 'Q',
+                (PieceType::Queen, Color::Black) => 'q',
+                (PieceType::King, Color::White) => 'K',
+                (PieceType::King, Color::Black) => 'k',
+            };
+
+            board_rep[rank_idx][file_idx] = piece_char;
+        }
+
+        // Print the board
+        for (i, rank) in board_rep.iter().enumerate() {
+            print!("{} ", 8 - i); // Print rank numbers
+            for square in rank.iter() {
+                print!("{} ", square);
+            }
+            println!();
+        }
+
+        // Print file letters at the bottom
+        println!("  a b c d e f g h");
+    }
     pub fn get_square(&self, piece: &Piece) -> Option<Square> {
         self.pieces
             .iter()
