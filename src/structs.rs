@@ -1,3 +1,5 @@
+use std::fmt;
+
 use chess_engine::square;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -190,7 +192,11 @@ impl Square {
         None
     }
 }
-
+impl fmt::Display for Square {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.file, self.rank)
+    }
+}
 #[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Piece {
     pub id: u8,
@@ -365,6 +371,21 @@ impl TryFrom<i8> for File {
         }
     }
 }
+impl fmt::Display for File {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let file_char = match self {
+            File::A => 'a',
+            File::B => 'b',
+            File::C => 'c',
+            File::D => 'd',
+            File::E => 'e',
+            File::F => 'f',
+            File::G => 'g',
+            File::H => 'h',
+        };
+        write!(f, "{}", file_char)
+    }
+}
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Deserialize, Serialize)]
 pub enum Rank {
@@ -407,6 +428,21 @@ impl TryFrom<i8> for Rank {
             7 => Ok(Rank::_8),
             _ => Err(()),
         }
+    }
+}
+impl fmt::Display for Rank {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let rank_num = match self {
+            Rank::_1 => 1,
+            Rank::_2 => 2,
+            Rank::_3 => 3,
+            Rank::_4 => 4,
+            Rank::_5 => 5,
+            Rank::_6 => 6,
+            Rank::_7 => 7,
+            Rank::_8 => 8,
+        };
+        write!(f, "{}", rank_num)
     }
 }
 

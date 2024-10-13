@@ -13,18 +13,18 @@ impl Board {
 
             // Get a character for the piece based on its type and color
             let piece_char = match (piece.r#type, piece.color) {
-                (PieceType::Pawn, Color::White) => 'P',
-                (PieceType::Pawn, Color::Black) => 'p',
-                (PieceType::Knight, Color::White) => 'N',
-                (PieceType::Knight, Color::Black) => 'n',
-                (PieceType::Bishop, Color::White) => 'B',
-                (PieceType::Bishop, Color::Black) => 'b',
-                (PieceType::Rook, Color::White) => 'R',
-                (PieceType::Rook, Color::Black) => 'r',
-                (PieceType::Queen, Color::White) => 'Q',
-                (PieceType::Queen, Color::Black) => 'q',
-                (PieceType::King, Color::White) => 'K',
-                (PieceType::King, Color::Black) => 'k',
+                (PieceType::Pawn, Color::White) => '♟',
+                (PieceType::Pawn, Color::Black) => '♙',
+                (PieceType::Knight, Color::White) => '♞',
+                (PieceType::Knight, Color::Black) => '♘',
+                (PieceType::Bishop, Color::White) => '♝',
+                (PieceType::Bishop, Color::Black) => '♗',
+                (PieceType::Rook, Color::White) => '♜',
+                (PieceType::Rook, Color::Black) => '♖',
+                (PieceType::Queen, Color::White) => '♛',
+                (PieceType::Queen, Color::Black) => '♕',
+                (PieceType::King, Color::White) => '♚',
+                (PieceType::King, Color::Black) => '♔',
             };
 
             board_rep[rank_idx][file_idx] = piece_char;

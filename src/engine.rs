@@ -58,24 +58,30 @@ fn count_material(board: &Board, color: Color) -> i32 {
     }
     material
 }
-fn order_moves(board: &Board, mut moves: Vec<Move>) -> Vec<Move> {
-    for r#move in moves {
+fn order_moves(board: &Board, moves: Vec<Move>) -> Vec<Move> {
+    let mut scores = vec![];
+    for r#move in &moves {
         let mut score_guess = 0;
         let move_piece_type = board.pieces.get(&r#move.from);
         let capture_piece_type = board.pieces.get(&r#move.to);
         // prioritise capturing opponent's most valuable pieces with our least valuable pieces
-        if let None = capture_piece_type {
+        if let Some(_) = capture_piece_type {
             score_guess = 10 * get_piece_value(&capture_piece_type.unwrap().r#type) - get_piece_value(&move_piece_type.unwrap().r#type);
         }
         //promoting a pawn is probably good
         if r#move.promotion.is_some() {
             score_guess += get_piece_value(&r#move.promotion.unwrap());
         }
+        scores.push(score_guess);
     }
-    sort_moves(moves)
+    sort_moves(moves, scores)
 }
-fn sort_moves(mut moves: Vec<Move>) -> Vec<Move> {
+fn sort_moves(moves: Vec<Move>, scores: Vec<i32>) -> Vec<Move> {
+    let mut zipped: Vec<_> = moves.into_iter().zip(scores).collect();
+    zipped.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by score (descending)
 
+    // Unzip the structs back
+    zipped.into_iter().map(|(s, _)| s).collect()
 }
 fn get_piece_value(piece: &PieceType) -> i32 {
     match piece {

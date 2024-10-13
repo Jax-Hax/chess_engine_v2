@@ -16,9 +16,8 @@ fn main() {
 }
 
 fn game_loop(board: &mut Board) {
+    board.print_board();
     loop {
-        board.print_board();
-        println!("The AI played a move.");
         println!("Current turn: {:?}", board.fullmove_number);
 
         // Generate all valid moves for the current turn
@@ -70,7 +69,9 @@ fn game_loop(board: &mut Board) {
         println!("The AI is thinking...");
         println!();
         let best_move = search(board, 6, i32::MIN, i32::MAX).1.unwrap();
-        board.execute(best_move);
+        board.execute(best_move.clone());
+        board.print_board();
+        println!("The AI played a move: {} to {}", best_move.from, best_move.to);
     }
 }
 
