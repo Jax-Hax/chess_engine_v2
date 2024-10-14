@@ -47,7 +47,7 @@ impl Board {
             .iter()
             .find_map(|(s, p)| if p.id == piece.id { Some(*s) } else { None })
     }
-    pub fn get_moves(&self) -> (Vec<Move>, bool) {
+    pub fn get_moves(&self, only_captures: bool) -> (Vec<Move>, bool) {
         let mut moves = vec![];
         let opposite_color = self.turn.opposite();
 

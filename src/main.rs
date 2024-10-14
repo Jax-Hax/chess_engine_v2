@@ -21,7 +21,7 @@ fn game_loop(board: &mut Board) {
         println!("Current turn: {:?}", board.fullmove_number);
 
         // Generate all valid moves for the current turn
-        let (moves, in_check) = board.get_moves();
+        let (moves, in_check) = board.get_moves(false);
         if moves.len() == 0 {
             if in_check {
                 println!("Checkmate! Game over!");
@@ -68,7 +68,7 @@ fn game_loop(board: &mut Board) {
         println!();
         println!("The AI is thinking...");
         println!();
-        let best_move = search(board, 6, i32::MIN, i32::MAX).1.unwrap();
+        let best_move = search(board, 10, i32::MIN, i32::MAX).1.unwrap();
         board.execute(best_move.clone());
         board.print_board();
         println!("The AI played a move: {} to {}", best_move.from, best_move.to);
@@ -120,7 +120,7 @@ fn _perft(board: &mut Board, depth: usize) -> usize {
 
     let mut count = 0;
 
-    for r#move in board.get_moves().0 {
+    for r#move in board.get_moves(false).0 {
         let castling_rights = board.castling_rights.clone();
         let enpassant_square = board.enpassant_square;
         let halfmove_clock = board.halfmove_clock;

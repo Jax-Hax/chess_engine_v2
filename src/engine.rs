@@ -8,9 +8,9 @@ const QUEEN_VALUE: i32 = 900;
 
 pub fn search(board: &mut Board, depth: usize, mut alpha: i32, beta: i32) -> (i32, Option<Move>) {
     if depth == 0 {
-        return (eval(&board), None);
+        return (search_all_captures(board, alpha, beta), None);
     }
-    let (moves, in_check) = board.get_moves();
+    let (moves, in_check) = board.get_moves(false);
     let mut best_move = moves[0].clone();
     if moves.len() == 0 {
         if in_check {
@@ -58,6 +58,10 @@ fn count_material(board: &Board, color: Color) -> i32 {
     }
     material
 }
+fn force_king_to_corner_endgame_eval(friendly_king_square: Square, opponent_king_square: Square, endgame_weight: i32) -> i32 {
+    let evaluation = 0;
+    evaluation
+}
 fn order_moves(board: &Board, moves: Vec<Move>) -> Vec<Move> {
     let mut scores = vec![];
     for r#move in &moves {
@@ -92,4 +96,26 @@ fn get_piece_value(piece: &PieceType) -> i32 {
         Queen => QUEEN_VALUE,
         King => 0,
     }
+}
+fn search_all_captures(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
+    let mut evaluation = eval(board);
+    if evaluation >= beta {
+        return beta;
+    }
+    alpha = alpha.max(evaluation);
+    let capture_moves = board.get_moves(true).0;
+    let capture_moves = order_moves(board, capture_moves);
+    for r#move in capture_moves {
+        let castling_rights = board.castling_rights.clone();
+        let enpassant_square = board.enpassant_square;
+        let halfmove_clock = board.halfmove_clock;
+        board.execute(r#move);
+        evaluation = search_all_captures(board, beta.wrapping_neg(), alpha.wrapping_neg()).wrapping_neg();
+        board.undo(castling_rights, enpassant_square, halfmove_clock);
+        if evaluation >= beta {
+            return beta;
+        }
+        alpha = alpha.max(evaluation);
+    }
+    alpha
 }
