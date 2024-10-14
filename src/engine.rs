@@ -58,9 +58,17 @@ fn count_material(board: &Board, color: Color) -> i32 {
     }
     material
 }
-fn force_king_to_corner_endgame_eval(friendly_king_square: Square, opponent_king_square: Square, endgame_weight: i32) -> i32 {
-    let evaluation = 0;
-    evaluation
+fn force_king_to_corner_endgame_eval(friendly_king_square: Square, opponent_king_square: Square, endgame_weight: f32) -> i32 {
+    let mut evaluation = 0;
+    let opponent_king_dist_to_center_file = (3 - opponent_king_square.file as i32).max(opponent_king_square.file as i32 - 4);
+    let opponent_king_dist_to_center_rank = (3 - opponent_king_square.file as i32).max(opponent_king_square.file as i32 - 4);
+    let opponent_king_dist_to_center = opponent_king_dist_to_center_file + opponent_king_dist_to_center_rank;
+    evaluation += opponent_king_dist_to_center;
+    let dist_between_kings_files = (friendly_king_square.file as i32 - opponent_king_square.file as i32).abs();
+    let dist_between_kings_ranks = (friendly_king_square.rank as i32 - opponent_king_square.rank as i32).abs();
+    let dist_between_kings = dist_between_kings_files + dist_between_kings_ranks;
+    evaluation += 14 - dist_between_kings;
+    (evaluation as f32 * 10.0 * endgame_weight).round() as i32
 }
 fn order_moves(board: &Board, moves: Vec<Move>) -> Vec<Move> {
     let mut scores = vec![];

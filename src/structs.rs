@@ -40,7 +40,6 @@ impl Move {
     }
 
     pub fn from_pawn_jump(from: Square, to: Square) -> Move {
-        assert_eq!((from.rank as i8 - to.rank as i8).abs(), 2);
         Move {
             from,
             to,
