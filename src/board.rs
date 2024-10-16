@@ -70,7 +70,7 @@ impl Board {
                 Pawn => {
                     let multiplier = self.turn.get_multiplier();
 
-                    if square.rank == self.turn.get_pawn_rank()
+                    if !only_captures && square.rank == self.turn.get_pawn_rank()
                         && self
                             .pieces
                             .get(&square.offset(0, multiplier).unwrap())
@@ -102,7 +102,7 @@ impl Board {
                             }
                         }
                         let target_square = square.offset(0, multiplier).unwrap();
-                        if self.pieces.get(&target_square).is_none() {
+                        if !only_captures && self.pieces.get(&target_square).is_none() {
                             for r#type in [Queen, Rook, Bishop, Knight] {
                                 moves.push(Move::from_promotion(square, target_square, r#type));
                             }
@@ -172,7 +172,7 @@ impl Board {
                             }
                         }
                         let target_square = square.offset(0, multiplier).unwrap();
-                        if self.pieces.get(&target_square).is_none() {
+                        if !only_captures && self.pieces.get(&target_square).is_none() {
                             moves.push(Move::from_normal(square, target_square));
                         }
                         if let Some(target_square) = square.offset(1, multiplier) {
@@ -199,15 +199,15 @@ impl Board {
                                         target_piece.clone(),
                                     ));
                                 }
-                            } else {
+                            } else if !only_captures {
                                 moves.push(Move::from_normal(square, target_square));
                             }
                         }
                     }
                 }
-                Bishop => self.get_straight_moves(&mut moves, piece, &Directions::BISHOP),
-                Rook => self.get_straight_moves(&mut moves, piece, &Directions::ROOK),
-                Queen => self.get_straight_moves(&mut moves, piece, &Directions::QUEEN),
+                Bishop => self.get_straight_moves(&mut moves, piece, &Directions::BISHOP, only_captures),
+                Rook => self.get_straight_moves(&mut moves, piece, &Directions::ROOK, only_captures),
+                Queen => self.get_straight_moves(&mut moves, piece, &Directions::QUEEN, only_captures),
                 King => {
                     for (file, rank) in Directions::KING {
                         if let Some(target_square) = square.offset(file, rank) {
@@ -219,7 +219,7 @@ impl Board {
                                         target_piece.clone(),
                                     ));
                                 }
-                            } else {
+                            } else if !only_captures {
                                 moves.push(Move::from_normal(square, target_square));
                             }
                         }
@@ -365,11 +365,13 @@ impl Board {
                 ));
             }
         }
-
+        if only_captures {
+            moves.retain(|m| m.captured.is_some());
+        }
         (moves, in_check)
     }
 
-    fn get_straight_moves(&self, moves: &mut Vec<Move>, piece: &Piece, directions: &[(i8, i8)]) {
+    fn get_straight_moves(&self, moves: &mut Vec<Move>, piece: &Piece, directions: &[(i8, i8)], only_captures: bool) {
         let square = self.get_square(piece).unwrap();
         for (file, rank) in directions {
             let mut file_offset = *file;
@@ -384,7 +386,7 @@ impl Board {
                         ));
                     }
                     break;
-                } else {
+                } else if !only_captures {
                     moves.push(Move::from_normal(square, target_square));
                 }
                 file_offset += file;

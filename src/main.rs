@@ -6,6 +6,7 @@ use structs::{Board, File, PieceType::*, Rank, Square};
 mod board;
 mod engine;
 mod fen;
+mod piece_square_table;
 mod play;
 mod structs;
 
@@ -16,6 +17,10 @@ fn main() {
 }
 
 fn game_loop(board: &mut Board) {
+    let mut depth = String::new();
+    println!("Welcome to Chess! Please enter the depth for the AI to evaluate at.");
+    stdin().read_line(&mut depth).expect("Failed to read input");
+    let depth: usize = depth.trim().parse().unwrap();
     board.print_board();
     loop {
         println!("Current turn: {:?}", board.fullmove_number);
@@ -68,10 +73,13 @@ fn game_loop(board: &mut Board) {
         println!();
         println!("The AI is thinking...");
         println!();
-        let best_move = search(board, 10, i32::MIN, i32::MAX).1.unwrap();
+        let best_move = search(board, depth, i32::MIN, i32::MAX).1.unwrap();
         board.execute(best_move.clone());
         board.print_board();
-        println!("The AI played a move: {} to {}", best_move.from, best_move.to);
+        println!(
+            "The AI played a move: {} to {}",
+            best_move.from, best_move.to
+        );
     }
 }
 

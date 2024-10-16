@@ -1,4 +1,4 @@
-use crate::structs::*;
+use crate::{piece_square_table::read_square_table, structs::*};
 
 const PAWN_VALUE: i32 = 100;
 const KNIGHT_VALUE: i32 = 300;
@@ -11,13 +11,13 @@ pub fn search(board: &mut Board, depth: usize, mut alpha: i32, beta: i32) -> (i3
         return (search_all_captures(board, alpha, beta), None);
     }
     let (moves, in_check) = board.get_moves(false);
-    let mut best_move = moves[0].clone();
     if moves.len() == 0 {
         if in_check {
             return (i32::MIN, None);
         }
         return (0, None);
     }
+    let mut best_move = moves[0].clone();
     let moves = order_moves(board, moves);
     for r#move in moves {
         let castling_rights = board.castling_rights.clone();
@@ -69,18 +69,31 @@ fn eval(board: &Board) -> i32 {
             }
         }
     }
+    let white_endgame_weight = endgame_phase_weight(white_eval - white_pawns * PAWN_VALUE);
+    let black_endgame_weight = endgame_phase_weight(black_eval - black_pawns * PAWN_VALUE);
     white_eval += force_king_to_corner_endgame_eval(
         white_king_square,
         black_king_square,
-        endgame_phase_weight(white_eval - white_pawns * PAWN_VALUE),
+        white_endgame_weight,
     );
     black_eval += force_king_to_corner_endgame_eval(
         black_king_square,
         white_king_square,
-        endgame_phase_weight(black_eval - black_pawns * PAWN_VALUE),
+        black_endgame_weight,
     );
+    white_eval += evalute_piece_square_tables(board, Color::White, white_endgame_weight);
+    black_eval += evalute_piece_square_tables(board, Color::Black, black_endgame_weight);
     let evaluation = white_eval - black_eval;
     evaluation * perspective
+}
+fn evalute_piece_square_tables(board: &Board, color: Color, endgame_weight: f32) -> i32 {
+    let mut value = 0;
+    for (square, piece) in &board.pieces {
+        if piece.color == color {
+            value += read_square_table(piece.r#type, square, piece.color, endgame_weight);
+        }
+    }
+    value
 }
 fn endgame_phase_weight(material_without_pawns: i32) -> f32 {
     const ENDGAME_MATERIAL_START: f32 = (ROOK_VALUE * 2 + BISHOP_VALUE + KNIGHT_VALUE) as f32;
