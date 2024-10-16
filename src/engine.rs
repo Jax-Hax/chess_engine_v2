@@ -14,7 +14,7 @@ pub fn search(board: &mut Board, depth: usize, mut alpha: i32, beta: i32) -> (i3
     let mut best_move = moves[0].clone();
     if moves.len() == 0 {
         if in_check {
-            return (i32::MIN, None)
+            return (i32::MIN, None);
         }
         return (0, None);
     }
@@ -26,7 +26,9 @@ pub fn search(board: &mut Board, depth: usize, mut alpha: i32, beta: i32) -> (i3
 
         board.execute(r#move.clone());
 
-        let evaluation = search(board, depth - 1, beta.wrapping_neg(), alpha.wrapping_neg()).0.wrapping_neg();
+        let evaluation = search(board, depth - 1, beta.wrapping_neg(), alpha.wrapping_neg())
+            .0
+            .wrapping_neg();
 
         board.undo(castling_rights, enpassant_square, halfmove_clock);
         if evaluation >= beta {
@@ -42,30 +44,80 @@ pub fn search(board: &mut Board, depth: usize, mut alpha: i32, beta: i32) -> (i3
     (alpha, Some(best_move))
 }
 fn eval(board: &Board) -> i32 {
-    let perspective = if board.turn == Color::White {1} else {-1};
-    let white_eval = count_material(board, Color::White);
-    let black_eval = count_material(board, Color::Black);
+    let perspective = if board.turn == Color::White { 1 } else { -1 };
+    let (mut white_eval, white_pawns) = count_material(board, Color::White);
+    let (mut black_eval, black_pawns) = count_material(board, Color::Black);
+    let kings: Vec<&Square> = board
+        .pieces
+        .iter()
+        .filter_map(|(square, piece)| {
+            if piece.r#type == PieceType::King {
+                Some(square)
+            } else {
+                None
+            }
+        })
+        .collect();
+    let mut white_king_square = &Square {rank: Rank::_1, file: File::A};
+    let mut black_king_square = &Square {rank: Rank::_1, file: File::A};
+
+    for &square in &kings {
+        if let Some(piece) = board.pieces.get(square) {
+            match piece.color {
+                Color::White => white_king_square = square,
+                Color::Black => black_king_square = square,
+            }
+        }
+    }
+    white_eval += force_king_to_corner_endgame_eval(
+        white_king_square,
+        black_king_square,
+        endgame_phase_weight(white_eval - white_pawns * PAWN_VALUE),
+    );
+    black_eval += force_king_to_corner_endgame_eval(
+        black_king_square,
+        white_king_square,
+        endgame_phase_weight(black_eval - black_pawns * PAWN_VALUE),
+    );
     let evaluation = white_eval - black_eval;
     evaluation * perspective
 }
-fn count_material(board: &Board, color: Color) -> i32 {
+fn endgame_phase_weight(material_without_pawns: i32) -> f32 {
+    const ENDGAME_MATERIAL_START: f32 = (ROOK_VALUE * 2 + BISHOP_VALUE + KNIGHT_VALUE) as f32;
+    let multiplier = 1.0 / ENDGAME_MATERIAL_START;
+    1.0 - 1.0_f32.min(material_without_pawns as f32 * multiplier)
+}
+fn count_material(board: &Board, color: Color) -> (i32, i32) {
     let mut material = 0;
+    let mut num_pawns = 0;
     for (_, piece) in &board.pieces {
         if piece.color != color {
             continue;
         }
         material += get_piece_value(&piece.r#type);
+        if let PieceType::Pawn = piece.r#type {
+            num_pawns += 1;
+        }
     }
-    material
+    (material, num_pawns)
 }
-fn force_king_to_corner_endgame_eval(friendly_king_square: Square, opponent_king_square: Square, endgame_weight: f32) -> i32 {
+fn force_king_to_corner_endgame_eval(
+    friendly_king_square: &Square,
+    opponent_king_square: &Square,
+    endgame_weight: f32,
+) -> i32 {
     let mut evaluation = 0;
-    let opponent_king_dist_to_center_file = (3 - opponent_king_square.file as i32).max(opponent_king_square.file as i32 - 4);
-    let opponent_king_dist_to_center_rank = (3 - opponent_king_square.file as i32).max(opponent_king_square.file as i32 - 4);
-    let opponent_king_dist_to_center = opponent_king_dist_to_center_file + opponent_king_dist_to_center_rank;
+    let opponent_king_dist_to_center_file =
+        (3 - opponent_king_square.file as i32).max(opponent_king_square.file as i32 - 4);
+    let opponent_king_dist_to_center_rank =
+        (3 - opponent_king_square.file as i32).max(opponent_king_square.file as i32 - 4);
+    let opponent_king_dist_to_center =
+        opponent_king_dist_to_center_file + opponent_king_dist_to_center_rank;
     evaluation += opponent_king_dist_to_center;
-    let dist_between_kings_files = (friendly_king_square.file as i32 - opponent_king_square.file as i32).abs();
-    let dist_between_kings_ranks = (friendly_king_square.rank as i32 - opponent_king_square.rank as i32).abs();
+    let dist_between_kings_files =
+        (friendly_king_square.file as i32 - opponent_king_square.file as i32).abs();
+    let dist_between_kings_ranks =
+        (friendly_king_square.rank as i32 - opponent_king_square.rank as i32).abs();
     let dist_between_kings = dist_between_kings_files + dist_between_kings_ranks;
     evaluation += 14 - dist_between_kings;
     (evaluation as f32 * 10.0 * endgame_weight).round() as i32
@@ -78,7 +130,8 @@ fn order_moves(board: &Board, moves: Vec<Move>) -> Vec<Move> {
         let capture_piece_type = board.pieces.get(&r#move.to);
         // prioritise capturing opponent's most valuable pieces with our least valuable pieces
         if let Some(_) = capture_piece_type {
-            score_guess = 10 * get_piece_value(&capture_piece_type.unwrap().r#type) - get_piece_value(&move_piece_type.unwrap().r#type);
+            score_guess = 10 * get_piece_value(&capture_piece_type.unwrap().r#type)
+                - get_piece_value(&move_piece_type.unwrap().r#type);
         }
         //promoting a pawn is probably good
         if r#move.promotion.is_some() {
@@ -118,7 +171,8 @@ fn search_all_captures(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
         let enpassant_square = board.enpassant_square;
         let halfmove_clock = board.halfmove_clock;
         board.execute(r#move);
-        evaluation = search_all_captures(board, beta.wrapping_neg(), alpha.wrapping_neg()).wrapping_neg();
+        evaluation =
+            search_all_captures(board, beta.wrapping_neg(), alpha.wrapping_neg()).wrapping_neg();
         board.undo(castling_rights, enpassant_square, halfmove_clock);
         if evaluation >= beta {
             return beta;
